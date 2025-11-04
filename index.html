@@ -3,46 +3,125 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Brick Calculator</title>
+  <title>Brick & Material Calculator</title>
   <style>
-    :root{--bg:#ffffff;--card:#f3f3f3;--accent:#06b6d4;--muted:#555555;color-scheme:light}
-    *{box-sizing:border-box;transition:all 0.3s ease;}
-    body{font-family:Inter,system-ui,Segoe UI,Arial;min-height:100vh;margin:0;background:var(--bg);color:#111;display:flex;align-items:center;justify-content:center;padding:24px}
-    .card{background:var(--card);border-radius:12px;padding:20px;max-width:920px;width:100%;box-shadow:0 6px 30px rgba(0,0,0,0.1);transition:transform 0.3s ease, box-shadow 0.3s ease;}
-    .card:hover{transform:translateY(-5px);box-shadow:0 12px 40px rgba(0,0,0,0.2);}
-    h1{margin:0 0 8px;font-size:20px;transition:color 0.3s ease;}
-    h1:hover{color:var(--accent);}
-    p.lead{margin:0 0 18px;color:var(--muted);font-size:13px;}
-    .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-    label{display:block;font-size:13px;margin-bottom:6px;color:#333}
-    input[type=number], select{width:100%;padding:10px;border-radius:8px;border:1px solid #ccc;background:transparent;color:inherit;font-size:14px;transition:all 0.3s ease;}
-    input[type=number]:hover, select:hover{border-color:var(--accent);box-shadow:0 0 5px rgba(6,182,212,0.3);}
-    input[type=number]:focus, select:focus{border-color:var(--accent);outline:none;box-shadow:0 0 8px rgba(6,182,212,0.5);}
-    .row{display:flex;gap:12px}
-    .actions{display:flex;gap:8px;margin-top:14px}
-    button{padding:10px 14px;border-radius:8px;border:0;background:var(--accent);color:#fff;cursor:pointer;font-weight:600;transition:all 0.3s ease;}
-    button:hover{background:darkcyan;transform:scale(1.05);}
-    button.secondary{background:transparent;border:1px solid #ccc;color:var(--muted)}
-    button.secondary:hover{background:var(--accent);color:#fff;transform:scale(1.05);}
-    .result{margin-top:18px;padding:12px;border-radius:10px;background:#e0f7fa;transition:all 0.3s ease;}
-    .result .big{font-size:28px;font-weight:700;transition:transform 0.3s ease;}
-    .result .big:hover{transform:scale(1.1);color:var(--accent);}
-    .small{font-size:13px;color:var(--muted)}
-    .full-width{grid-column:1 / -1}
-    h4{margin:10px 0 5px;font-size:15px;}
-    @media (max-width:720px){.grid{grid-template-columns:1fr}.row{flex-direction:column}}
+    /* ----------------------------------------------------------------
+    // THEME VARIABLES AND STYLES
+    // ---------------------------------------------------------------- */
+    :root {
+        /* Light Theme Defaults */
+        --bg: #f8f9fa;
+        --card: #ffffff;
+        --text: #1f2937;
+        --muted: #6b7280;
+        --border: #e5e7eb;
+        --input-bg: #f9fafb;
+        --accent: #06b6d4;
+        --accent-hover: #0891b2;
+        --result-bg: #e0f7fa; /* Light cyan for result box */
+        --result-accent: #0e7490;
+
+        color-scheme: light; 
+    }
+
+    /* Dark Theme Overrides */
+    body.dark {
+        --bg: #111827;
+        --card: #1f2937;
+        --text: #f3f4f6;
+        --muted: #9ca3af;
+        --border: #4b5563;
+        --input-bg: #374151;
+        --result-bg: #0e7490; /* Dark cyan for result box */
+        --result-accent: #e0f7fa;
+
+        color-scheme: dark; 
+    }
+
+    /* ----------------------------------------------------------------
+    // BASE STYLES AND LAYOUT
+    // ---------------------------------------------------------------- */
+    *{box-sizing:border-box;transition:all 0.4s ease;}
+    body{font-family:'Inter',system-ui,Segoe UI,Arial,sans-serif;min-height:100vh;margin:0;background:var(--bg);color:var(--text);display:flex;align-items:center;justify-content:center;padding:16px}
+    
+    .card{background:var(--card);border-radius:16px;padding:24px;max-width:960px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.15);transition:transform 0.3s ease, box-shadow 0.3s ease;}
+    .card:hover{box-shadow:0 15px 50px rgba(0,0,0,0.2);}
+    
+    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+    h1{margin:0 0 4px;font-size:24px;display:flex;align-items:center;gap:8px;}
+    .icon-title {width: 24px; height: 24px; fill: none; stroke: var(--accent); stroke-width: 2;}
+    p.lead{margin:0;color:var(--muted);font-size:14px;}
+    
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px 20px;}
+    
+    /* Input Group Styling */
+    label{display:block;font-size:13px;margin-bottom:6px;color:var(--text);font-weight:600;}
+    input[type=number], select{width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--input-bg);color:var(--text);font-size:14px;box-shadow:inset 0 1px 3px rgba(0,0,0,0.05);-webkit-appearance: none;appearance: none;}
+    input[type=number]:focus, select:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px rgba(6,182,212,0.3), inset 0 1px 3px rgba(0,0,0,0.05);}
+    
+    .row{display:flex;gap:8px}
+    .small{font-size:12px;color:var(--muted);margin-top:4px;}
+    
+    /* Options and Openings */
+    .options-group{grid-column:1 / -1;padding:16px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin:8px 0;}
+    .options-group .row{flex-wrap:wrap;gap:16px;}
+    .options-group label{font-weight:400;margin-bottom:0;}
+    .options-group input[type="checkbox"]{margin-right:4px;}
+
+    /* Buttons */
+    .actions{display:flex;gap:12px;margin-top:20px;grid-column:1 / -1;}
+    button{padding:12px 18px;border-radius:8px;border:0;background:var(--accent);color:#fff;cursor:pointer;font-weight:700;box-shadow:0 4px 15px rgba(6,182,212,0.3);text-transform:uppercase;letter-spacing:0.5px;}
+    button:hover{background:var(--accent-hover);box-shadow:0 6px 20px rgba(6,182,212,0.4);transform:translateY(-1px);}
+    button.secondary{background:var(--card);border:1px solid var(--border);color:var(--muted);box-shadow:none;}
+    button.secondary:hover{background:var(--input-bg);color:var(--text);transform:translateY(-1px);box-shadow:0 2px 5px rgba(0,0,0,0.05);}
+
+    /* Result Box */
+    .result{margin-top:24px;padding:24px;border-radius:12px;background:var(--result-bg);color:var(--text);border:1px solid var(--accent);}
+    .result .header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
+    .result .header .big{font-size:32px;font-weight:900;color:var(--result-accent);}
+    
+    .result h4{margin:16px 0 8px;font-size:16px;font-weight:700;color:var(--accent);}
+    .result hr {border: 0; height: 1px; background: var(--border); margin: 12px 0;}
+    .result strong {font-weight: 700; color: var(--text);}
+    
+    /* Theme Toggle Button */
+    #themeToggle{width:40px;height:40px;padding:8px;border-radius:50%;background:var(--input-bg);color:var(--muted);border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.3s, color 0.3s;}
+    #themeToggle:hover{background:var(--accent);color:#fff;transform:scale(1.05);}
+    .icon-toggle {width: 20px; height: 20px; fill: currentColor;}
+
+    /* Mobile Adjustments */
+    @media (max-width: 600px) {
+        .card {padding: 16px; border-radius: 12px;}
+        .grid {gap: 12px;}
+        .actions {flex-direction: column; gap: 10px;}
+        button {width: 100%;}
+        .result .header .big {font-size: 28px;}
+    }
   </style>
 </head>
-<body>
+<body class="light">
   <div class="card" role="main">
-    <h1>Brick Calculator</h1>
-    <p class="lead">Estimate how many bricks and how much material you need to build a wall. Includes mortar and wastage options.</p>
+    <header>
+      <h1>
+        <svg class="icon-title" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="12 22 12 12"></polyline><path d="M12 12l8-5"></path><path d="M12 12l-8-5"></path></svg>
+        Construction Material Calculator
+      </h1>
+      <button id="themeToggle" aria-label="Toggle Theme">
+        <!-- Moon Icon (for initial state in light mode) -->
+        <svg class="icon-toggle" id="moon-icon" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        <!-- Sun Icon (hidden initially) -->
+        <svg class="icon-toggle" id="sun-icon" style="display:none;" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+      </button>
+    </header>
+    
+    <p class="lead">Estimate brick count and necessary materials (cement and sand) for a masonry wall. Calculations are based on volume.</p>
 
     <div class="grid">
+      <!-- Wall Dimensions -->
       <div>
         <label>Wall length</label>
         <div class="row">
-          <input id="wallLength" type="number" min="0" step="0.01" placeholder="e.g. 5" value="5" />
+          <input id="wallLength" type="number" min="0" step="0.01" placeholder="Length" value="5" />
           <select id="wallLengthUnit"><option value="m">m</option><option value="cm">cm</option><option value="mm">mm</option></select>
         </div>
       </div>
@@ -50,7 +129,7 @@
       <div>
         <label>Wall height</label>
         <div class="row">
-          <input id="wallHeight" type="number" min="0" step="0.01" placeholder="e.g. 2.5" value="2.5" />
+          <input id="wallHeight" type="number" min="0" step="0.01" placeholder="Height" value="2.5" />
           <select id="wallHeightUnit"><option value="m">m</option><option value="cm">cm</option><option value="mm">mm</option></select>
         </div>
       </div>
@@ -58,66 +137,76 @@
       <div>
         <label>Wall thickness</label>
         <div class="row">
-          <input id="wallThickness" type="number" min="0" step="0.01" placeholder="e.g. 0.115" value="0.115" />
+          <input id="wallThickness" type="number" min="0" step="0.01" placeholder="Thickness" value="0.115" />
           <select id="wallThicknessUnit"><option value="m" selected>m</option><option value="cm">cm</option><option value="mm">mm</option></select>
         </div>
         <p class="small">Typical single-brick wall = 0.115 m (115 mm)</p>
       </div>
 
+      <!-- Brick Dimensions -->
       <div>
         <label>Brick size (L × H × W)</label>
         <div class="row">
-          <input id="brickLength" type="number" min="0" step="0.1" placeholder="length" value="190" />
-          <input id="brickHeight" type="number" min="0" step="0.1" placeholder="height" value="90" />
-          <input id="brickWidth" type="number" min="0" step="0.1" placeholder="width" value="90" />
+          <input id="brickLength" type="number" min="0" step="0.1" placeholder="L" value="190" />
+          <input id="brickHeight" type="number" min="0" step="0.1" placeholder="H" value="90" />
+          <input id="brickWidth" type="number" min="0" step="0.1" placeholder="W" value="90" />
         </div>
         <div style="margin-top:8px" class="row">
           <select id="brickUnit"><option value="mm" selected>mm</option><option value="cm">cm</option><option value="m">m</option></select>
-          <input id="mortar" type="number" min="0" step="0.1" placeholder="mortar (mm)" value="10" />
+          <input id="mortar" type="number" min="0" step="0.1" placeholder="Mortar Gap (mm)" value="10" />
           <div style="flex:1"></div>
         </div>
-        <p class="small">Common brick: 190×90×90 mm, mortar usually 8–10 mm</p>
+        <p class="small">Common brick: 190×90×90 mm, typical mortar gap is 10 mm</p>
       </div>
 
-      <div>
-        <label>Wastage / breakage (%)</label>
-        <input id="wastage" type="number" min="0" step="0.1" placeholder="e.g. 5" value="5" />
-        <p class="small">Percent to add for brick waste (default 5%)</p>
-      </div>
-      
-      <div id="openings">
-        <!-- This div is hidden/shown by JS based on the checkbox state -->
-        <label>Openings area (sum of doors/windows) in m²</label>
-        <input id="openingsArea" type="number" min="0" step="0.01" placeholder="e.g. 2.5" value="0" />
-      </div>
-      <script>document.getElementById('openings').style.display='none';</script>
-
+      <!-- Mortar Ratio -->
       <div>
         <label>Mortar Mix Ratio (Cement : Sand)</label>
         <div class="row">
           <input id="cementRatio" type="number" min="1" step="1" placeholder="Cement (e.g. 1)" value="1" />
           <input id="sandRatio" type="number" min="1" step="1" placeholder="Sand (e.g. 6)" value="6" />
         </div>
-        <p class="small">Commonly 1:4, 1:5, or 1:6</p>
+        <p class="small">Commonly 1:4, 1:5, or 1:6 mix.</p>
       </div>
 
-      <div class="full-width">
-        <label>Calculation options</label>
+      <!-- Wastage -->
+      <div>
+        <label>Wastage / Breakage (%)</label>
+        <input id="wastage" type="number" min="0" step="0.1" placeholder="e.g. 5" value="5" />
+        <p class="small">Percent to add for brick waste (default 5%)</p>
+      </div>
+
+      <!-- Openings -->
+      <div id="openings">
+        <label>Openings area (sum of doors/windows) in $\text{m}^2$</label>
+        <input id="openingsArea" type="number" min="0" step="0.01" placeholder="e.g. 2.5" value="0" />
+        <p class="small">Total area of doors, windows, etc., to subtract from the wall.</p>
+      </div>
+      <script>document.getElementById('openings').style.display='none';</script>
+
+      <!-- Options -->
+      <div class="options-group">
+        <label>Calculation Options</label>
         <div class="row">
-          <label style="display:flex;align-items:center;gap:8px"><input id="includeMortar" type="checkbox" checked /> Include mortar thickness in brick layout</label>
-          <label style="display:flex;align-items:center;gap:8px"><input id="subtractOpenings" type="checkbox" /> Subtract openings (doors/windows)</label>
+          <label style="display:flex;align-items:center;"><input id="includeMortar" type="checkbox" checked /> Use unit volume (brick + mortar)</label>
+          <label style="display:flex;align-items:center;"><input id="subtractOpenings" type="checkbox" /> Subtract openings area</label>
         </div>
       </div>
 
-      <div class="full-width actions">
+      <!-- Actions -->
+      <div class="actions">
         <button id="calc">Calculate</button>
-        <button id="reset" class="secondary">Reset</button>
+        <button id="reset" class="secondary">Reset Inputs</button>
       </div>
 
+      <!-- Result Box -->
       <div class="full-width result" id="resultBox" style="display:none">
-        <div><span class="small">Estimated bricks required</span></div>
-        <div class="big" id="bricksNeeded">0</div>
-        <div style="margin-top:8px" class="small" id="details"></div>
+        <div class="header">
+          <span class="small">Estimated Bricks Required</span>
+          <div class="big" id="bricksNeeded">0</div>
+        </div>
+        <hr>
+        <div id="details"></div>
       </div>
 
     </div>
@@ -125,6 +214,31 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
+        // --- THEME MANAGEMENT (Visual Change Only) ---
+        const themeToggle = document.getElementById('themeToggle');
+        const body = document.body;
+        const moonIcon = document.getElementById('moon-icon');
+        const sunIcon = document.getElementById('sun-icon');
+        
+        const currentTheme = localStorage.getItem('theme') || 
+                             (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+
+        const applyTheme = (theme) => {
+            body.className = theme;
+            localStorage.setItem('theme', theme);
+            moonIcon.style.display = theme === 'dark' ? 'none' : 'block';
+            sunIcon.style.display = theme === 'dark' ? 'block' : 'none';
+        };
+
+        const toggleTheme = () => {
+            const newTheme = body.classList.contains('dark') ? 'light' : 'dark';
+            applyTheme(newTheme);
+        };
+
+        applyTheme(currentTheme);
+        themeToggle.addEventListener('click', toggleTheme);
+        // ---------------------------------------------
+        
         // --- Utility Function for Unit Conversion ---
         const unitToMeters = (value, unit) => {
             if (value === null || isNaN(value)) return 0;
@@ -175,7 +289,7 @@
         const bricksNeededOutput = $('bricksNeeded');
         const detailsOutput = $('details');
 
-        // --- Core Logic ---
+        // --- Core Logic (Formulas are UNCHANGED) ---
 
         const updateOpeningsVisibility = () => {
             openingsContainer.style.display = subtractOpeningsCheckbox.checked ? 'block' : 'none';
@@ -202,7 +316,7 @@
                 // Input validation
                 if (wallLength <= 0 || wallHeight <= 0 || wallThickness <= 0 || brickLengthRaw <= 0 || brickHeightRaw <= 0 || brickWidth <= 0) {
                     bricksNeededOutput.textContent = '0';
-                    detailsOutput.textContent = 'Please enter valid positive dimensions for the wall and bricks.';
+                    detailsOutput.innerHTML = 'Please enter valid positive dimensions for the wall and bricks.';
                     resultBox.style.display = 'block';
                     return;
                 }
@@ -281,19 +395,32 @@
                 
                 // Prepare details breakdown
                 let detailsHtml = `
-                    <h4>Brick Estimate Details</h4>
+                    <h4><span style="color:var(--accent);">🧱</span> Brick Estimate Details</h4>
                     Wall Volume (L×H×T): <strong>${effectiveWallVolume.toFixed(3)} m³</strong>.
                     Brick Unit Volume (w/ ${includeMortarCheckbox.checked ? `${(mortarThickness*1000).toFixed(0)}mm Mortar` : 'No Mortar'}): <strong>${brickUnitVolume.toFixed(5)} m³</strong>.
                     ${subtractOpeningsCheckbox.checked ? `Area after openings (${openingsArea.toFixed(2)} m²) subtraction: <strong>${effectiveWallArea.toFixed(2)} m²</strong>. <br>` : ''}
                     Raw Bricks Needed: <strong>${totalRawBricks.toFixed(0).toLocaleString('en-US')}</strong>.
                     Wastage (${(wastageRate * 100).toFixed(1)}%): <strong>${(finalBricks - totalRawBricks).toFixed(0).toLocaleString('en-US')} bricks</strong>.
-                    ---
-                    <h4>Mortar & Material Estimates (${cementRatio}:${sandRatio} mix)</h4>
+                    
+                    <hr>
+                    
+                    <h4><span style="color:var(--accent);">🏗️</span> Mortar & Material Estimates (${cementRatio}:${sandRatio} mix)</h4>
                     Wet Mortar Volume: <strong>${wetMortarVolume.toFixed(4)} m³</strong>.
-                    Dry Mortar Volume (w/ 1.33 Factor): <strong>${dryMortarVolume.toFixed(4)} m³</strong>.
+                    Dry Mortar Volume (w/ 1.33 Bulking Factor): <strong>${dryMortarVolume.toFixed(4)} m³</strong>.
+                    
                     <br>
-                    Cement: <strong>${cementCUM.toFixed(4)} m³</strong> ($\approx$ <strong>${cementBags.toFixed(2)} bags</strong> / <strong>${cementKG.toFixed(2)} kg</strong>).
-                    Sand: <strong>${sandCUM.toFixed(4)} m³</strong>.
+                    
+                    <p class="small">
+                      <span style="font-size:14px; font-weight:600; color:var(--text);">Cement Required:</span><br>
+                      CUM: <strong>${cementCUM.toFixed(4)} m³</strong><br>
+                      Bags (50kg): <strong>${cementBags.toFixed(2)} bags</strong><br>
+                      Weight: <strong>${cementKG.toFixed(2)} kg</strong>
+                    </p>
+                    
+                    <p class="small" style="margin-top:8px;">
+                      <span style="font-size:14px; font-weight:600; color:var(--text);">Sand Required:</span><br>
+                      CUM: <strong>${sandCUM.toFixed(4)} m³</strong>
+                    </p>
                 `;
 
                 detailsOutput.innerHTML = detailsHtml;
@@ -302,7 +429,7 @@
             } catch (error) {
                 console.error("Calculation error:", error);
                 bricksNeededOutput.textContent = 'Error';
-                detailsOutput.textContent = 'An error occurred during calculation. Check input values.';
+                detailsOutput.innerHTML = 'An error occurred during calculation. Check input values.';
                 resultBox.style.display = 'block';
             }
         };
