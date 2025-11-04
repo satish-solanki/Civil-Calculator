@@ -29,13 +29,14 @@
     .result .big:hover{transform:scale(1.1);color:var(--accent);}
     .small{font-size:13px;color:var(--muted)}
     .full-width{grid-column:1 / -1}
+    h4{margin:10px 0 5px;font-size:15px;}
     @media (max-width:720px){.grid{grid-template-columns:1fr}.row{flex-direction:column}}
   </style>
 </head>
 <body>
   <div class="card" role="main">
     <h1>Brick Calculator</h1>
-    <p class="lead">Estimate how many bricks you need to build a wall. Enter wall dimensions and brick size — includes mortar and wastage options.</p>
+    <p class="lead">Estimate how many bricks and how much material you need to build a wall. Includes mortar and wastage options.</p>
 
     <div class="grid">
       <div>
@@ -75,13 +76,13 @@
           <input id="mortar" type="number" min="0" step="0.1" placeholder="mortar (mm)" value="10" />
           <div style="flex:1"></div>
         </div>
-        <p class="small">Common brick: 190×90×90 mm (India), mortar usually 8–10 mm</p>
+        <p class="small">Common brick: 190×90×90 mm, mortar usually 8–10 mm</p>
       </div>
 
       <div>
         <label>Wastage / breakage (%)</label>
         <input id="wastage" type="number" min="0" step="0.1" placeholder="e.g. 5" value="5" />
-        <p class="small">Percent to add for waste (default 5%)</p>
+        <p class="small">Percent to add for brick waste (default 5%)</p>
       </div>
       
       <div id="openings">
@@ -90,6 +91,15 @@
         <input id="openingsArea" type="number" min="0" step="0.01" placeholder="e.g. 2.5" value="0" />
       </div>
       <script>document.getElementById('openings').style.display='none';</script>
+
+      <div>
+        <label>Mortar Mix Ratio (Cement : Sand)</label>
+        <div class="row">
+          <input id="cementRatio" type="number" min="1" step="1" placeholder="Cement (e.g. 1)" value="1" />
+          <input id="sandRatio" type="number" min="1" step="1" placeholder="Sand (e.g. 6)" value="6" />
+        </div>
+        <p class="small">Commonly 1:4, 1:5, or 1:6</p>
+      </div>
 
       <div class="full-width">
         <label>Calculation options</label>
@@ -116,19 +126,13 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
         // --- Utility Function for Unit Conversion ---
-        /**
-         * Converts a value from a specified unit to meters (the standard calculation unit).
-         * @param {number} value - The input value.
-         * @param {string} unit - The unit ('m', 'cm', 'mm').
-         * @returns {number} The value in meters.
-         */
         const unitToMeters = (value, unit) => {
             if (value === null || isNaN(value)) return 0;
             switch (unit) {
                 case 'cm':
-                    return value / 100; // cm to m
+                    return value / 100;
                 case 'mm':
-                    return value / 1000; // mm to m
+                    return value / 1000;
                 case 'm':
                 default:
                     return value;
@@ -140,10 +144,10 @@
 
         // Wall inputs
         const wallLengthInput = $('wallLength');
-        const wallLengthUnit = $('wallLengthUnit');
         const wallHeightInput = $('wallHeight');
-        const wallHeightUnit = $('wallHeightUnit');
         const wallThicknessInput = $('wallThickness');
+        const wallLengthUnit = $('wallLengthUnit');
+        const wallHeightUnit = $('wallHeightUnit');
         const wallThicknessUnit = $('wallThicknessUnit');
 
         // Brick inputs
@@ -151,13 +155,17 @@
         const brickHeightInput = $('brickHeight');
         const brickWidthInput = $('brickWidth');
         const brickUnit = $('brickUnit');
-        const mortarInput = $('mortar'); // Mortar is assumed to be in mm per standard field practice
+        const mortarInput = $('mortar');
         const wastageInput = $('wastage');
+
+        // Material inputs
+        const cementRatioInput = $('cementRatio');
+        const sandRatioInput = $('sandRatio');
 
         // Options
         const includeMortarCheckbox = $('includeMortar');
         const subtractOpeningsCheckbox = $('subtractOpenings');
-        const openingsContainer = $('openings'); // Correctly targets the div with id="openings"
+        const openingsContainer = $('openings'); 
         const openingsAreaInput = $('openingsArea');
 
         // Buttons and Output
@@ -169,20 +177,13 @@
 
         // --- Core Logic ---
 
-        /**
-         * Toggles the visibility of the openings area input based on the checkbox state.
-         */
         const updateOpeningsVisibility = () => {
             openingsContainer.style.display = subtractOpeningsCheckbox.checked ? 'block' : 'none';
-            // If hiding, reset the openings area value to prevent incorrect calculations
             if (!subtractOpeningsCheckbox.checked) {
                 openingsAreaInput.value = '0';
             }
         };
 
-        /**
-         * Reads all inputs, performs calculations, and updates the result.
-         */
         const calculateBricks = () => {
             try {
                 // 1. Get and Convert Wall Dimensions to Meters
@@ -195,78 +196,104 @@
                 const brickHeightRaw = unitToMeters(parseFloat(brickHeightInput.value), brickUnit.value);
                 const brickWidth = unitToMeters(parseFloat(brickWidthInput.value), brickUnit.value); 
                 
-                // Mortar is read in mm, convert to meters
                 const mortarThickness = unitToMeters(parseFloat(mortarInput.value), 'mm');
                 const wastageRate = parseFloat(wastageInput.value) / 100 || 0;
 
                 // Input validation
-                if (wallLength <= 0 || wallHeight <= 0 || wallThickness <= 0 || brickLengthRaw <= 0 || brickHeightRaw <= 0 || brickWidth <= 0 || mortarThickness < 0 || wastageRate < 0) {
+                if (wallLength <= 0 || wallHeight <= 0 || wallThickness <= 0 || brickLengthRaw <= 0 || brickHeightRaw <= 0 || brickWidth <= 0) {
                     bricksNeededOutput.textContent = '0';
                     detailsOutput.textContent = 'Please enter valid positive dimensions for the wall and bricks.';
                     resultBox.style.display = 'block';
                     return;
                 }
 
-                // 3. Calculate Effective Brick Dimensions (with mortar, if included)
-                let brickLengthTotal = brickLengthRaw;
-                let brickHeightTotal = brickHeightRaw;
-
-                if (includeMortarCheckbox.checked) {
-                    // Mortar added to both horizontal (length) and vertical (height) dimensions
-                    brickLengthTotal += mortarThickness;
-                    brickHeightTotal += mortarThickness;
-                }
-
-                // 4. Calculate Wall Area and Effective Area
+                // 3. Calculate Wall Area and Effective Area
                 const wallArea = wallLength * wallHeight;
                 let openingsArea = 0;
                 let effectiveWallArea = wallArea;
 
                 if (subtractOpeningsCheckbox.checked) {
                     openingsArea = parseFloat(openingsAreaInput.value) || 0;
-                    effectiveWallArea = Math.max(0, wallArea - openingsArea); // Area cannot be negative
+                    effectiveWallArea = Math.max(0, wallArea - openingsArea);
                 }
                 
-                // Area of one brick + mortar joint (used for calculating quantity per area)
-                const brickAreaWithMortar = brickLengthTotal * brickHeightTotal;
+                // 4. Calculate Effective Wall Volume
+                const effectiveWallVolume = effectiveWallArea * wallThickness;
 
-                // 5. Bricks per Square Meter (BPM)
-                const bricksPerSqMeter = 1 / brickAreaWithMortar;
+                // 5. Calculate Volume of one Brick Unit (Brick + Mortar on all 3 dimensions: L, H, W)
+                let brickUnitVolume;
+                if (includeMortarCheckbox.checked) {
+                    const brickLengthWithMortar = brickLengthRaw + mortarThickness;
+                    const brickHeightWithMortar = brickHeightRaw + mortarThickness;
+                    const brickWidthWithMortar = brickWidth + mortarThickness;
+                    
+                    brickUnitVolume = brickLengthWithMortar * brickHeightWithMortar * brickWidthWithMortar;
+                } else {
+                    brickUnitVolume = brickLengthRaw * brickHeightRaw * brickWidth;
+                }
 
-                // 6. Bricks for a Single Layer
-                const bricksPerLayer = effectiveWallArea * bricksPerSqMeter;
+                // --- BRICK COUNT CALCULATION ---
+                // 6. Total Raw Bricks Needed (Wall Volume / Brick Unit Volume)
+                const totalRawBricks = effectiveWallVolume / brickUnitVolume;
 
-                // 7. Calculate Number of Layers based on Wall Thickness
-                // We assume the brick width (W) is laid across the wall thickness (T)
-                // N_layers = ceil(Wall Thickness / Brick Width)
-                // This accounts for multiple layers if the wall is thicker than one brick width.
-                const numberOfLayers = Math.ceil(wallThickness / brickWidth);
-                
-                // 8. Total Raw Bricks Needed (before wastage)
-                const totalRawBricks = bricksPerLayer * numberOfLayers;
-
-                // 9. Apply Wastage
+                // 7. Apply Wastage (for bricks only)
                 const totalBricksWithWastage = totalRawBricks * (1 + wastageRate);
 
-                // 10. Final Result (round up to nearest whole brick)
+                // 8. Final Result (round up to nearest whole brick)
                 const finalBricks = Math.ceil(totalBricksWithWastage);
+
+
+                // --- MATERIAL CALCULATION (Mortar, Cement, Sand) ---
+
+                // Brick volume without mortar (in m³)
+                const brickVolumeRaw = brickLengthRaw * brickHeightRaw * brickWidth;
+                
+                // Total volume occupied by raw bricks in the wall
+                // We use the floor/raw count here as you only need enough mortar for the *number* of bricks you calculated.
+                const totalBrickVolumeRaw = Math.floor(totalRawBricks) * brickVolumeRaw;
+
+                // Wet Mortar Volume (Total Wall Volume - Total Raw Brick Volume)
+                const wetMortarVolume = effectiveWallVolume - totalBrickVolumeRaw;
+                
+                // Dry Mortar Volume (Applying a bulking factor for wet-to-dry, commonly 1.33)
+                const DRY_MORTAR_FACTOR = 1.33; 
+                const dryMortarVolume = wetMortarVolume * DRY_MORTAR_FACTOR;
+
+                // Get Mortar Mix Ratios
+                const cementRatio = parseFloat(cementRatioInput.value) || 1;
+                const sandRatio = parseFloat(sandRatioInput.value) || 6;
+                const totalRatio = cementRatio + sandRatio;
+
+                // Material Quantities (Based on Dry Mortar Volume)
+                const cementCUM = dryMortarVolume * (cementRatio / totalRatio);
+                const sandCUM = dryMortarVolume * (sandRatio / totalRatio);
+
+                // Constants for Cement Conversion (Standard 50kg bag)
+                const CEMENT_DENSITY_KG_PER_CUM = 1440; // kg/m³
+                const CEMENT_VOLUME_PER_BAG = 0.0347; // m³ per bag (approx. 50kg/1440 kg/m³)
+                
+                const cementKG = cementCUM * CEMENT_DENSITY_KG_PER_CUM;
+                const cementBags = cementCUM / CEMENT_VOLUME_PER_BAG;
+
 
                 // --- Update Output ---
                 bricksNeededOutput.textContent = finalBricks.toLocaleString('en-US');
                 
                 // Prepare details breakdown
                 let detailsHtml = `
-                    Wall Area (L×H): <strong>${wallLength.toFixed(2)}m × ${wallHeight.toFixed(2)}m = ${wallArea.toFixed(2)} m²</strong>.
-                    Wall Thickness: <strong>${(wallThickness * 1000).toFixed(0)} mm</strong> (${numberOfLayers} brick layer${numberOfLayers > 1 ? 's' : ''}).
-                    <br>
+                    <h4>Brick Estimate Details</h4>
+                    Wall Volume (L×H×T): <strong>${effectiveWallVolume.toFixed(3)} m³</strong>.
+                    Brick Unit Volume (w/ ${includeMortarCheckbox.checked ? `${(mortarThickness*1000).toFixed(0)}mm Mortar` : 'No Mortar'}): <strong>${brickUnitVolume.toFixed(5)} m³</strong>.
                     ${subtractOpeningsCheckbox.checked ? `Area after openings (${openingsArea.toFixed(2)} m²) subtraction: <strong>${effectiveWallArea.toFixed(2)} m²</strong>. <br>` : ''}
-                    Brick Size (w/o Mortar): <strong>${(brickLengthRaw*1000).toFixed(0)} × ${(brickHeightRaw*1000).toFixed(0)} × ${(brickWidth*1000).toFixed(0)} mm</strong>.
-                    <br>
-                    ${includeMortarCheckbox.checked ? `Brick Area (w/ ${mortarInput.value}mm Mortar Joint): <strong>${(brickLengthTotal * brickHeightTotal).toFixed(4)} m²</strong>. ` : ''}
-                    Bricks/m² (Layer): <strong>${bricksPerSqMeter.toFixed(2)}</strong>.
-                    <br>
                     Raw Bricks Needed: <strong>${totalRawBricks.toFixed(0).toLocaleString('en-US')}</strong>.
                     Wastage (${(wastageRate * 100).toFixed(1)}%): <strong>${(finalBricks - totalRawBricks).toFixed(0).toLocaleString('en-US')} bricks</strong>.
+                    ---
+                    <h4>Mortar & Material Estimates (${cementRatio}:${sandRatio} mix)</h4>
+                    Wet Mortar Volume: <strong>${wetMortarVolume.toFixed(4)} m³</strong>.
+                    Dry Mortar Volume (w/ 1.33 Factor): <strong>${dryMortarVolume.toFixed(4)} m³</strong>.
+                    <br>
+                    Cement: <strong>${cementCUM.toFixed(4)} m³</strong> ($\approx$ <strong>${cementBags.toFixed(2)} bags</strong> / <strong>${cementKG.toFixed(2)} kg</strong>).
+                    Sand: <strong>${sandCUM.toFixed(4)} m³</strong>.
                 `;
 
                 detailsOutput.innerHTML = detailsHtml;
@@ -280,9 +307,6 @@
             }
         };
 
-        /**
-         * Resets all input fields to their initial state.
-         */
         const resetForm = () => {
             // Reset all number inputs to their default values 
             wallLengthInput.value = "5";
@@ -295,6 +319,10 @@
             wastageInput.value = "5";
             openingsAreaInput.value = "0";
 
+            // Reset new material inputs
+            cementRatioInput.value = "1";
+            sandRatioInput.value = "6";
+
             // Reset selectors and checkboxes to default
             wallLengthUnit.value = "m";
             wallHeightUnit.value = "m";
@@ -305,7 +333,7 @@
 
             // Hide the result and openings container
             resultBox.style.display = 'none';
-            updateOpeningsVisibility(); // Use the function to hide/reset openings
+            updateOpeningsVisibility();
         };
 
         // --- Event Listeners ---
@@ -313,7 +341,7 @@
         calculateButton.addEventListener('click', calculateBricks);
         resetButton.addEventListener('click', resetForm);
 
-        // Initial setup on load (Ensuring openings are hidden based on default checkbox state)
+        // Initial setup on load 
         updateOpeningsVisibility();
     });
   </script>
